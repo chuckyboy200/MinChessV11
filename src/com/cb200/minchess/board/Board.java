@@ -126,6 +126,9 @@ public class Board {
      * @return an array of moves, the array's max size is set at 100, the last element of the array is the length of the move list
      */
     public final static int[] gen(long[] board, boolean legal, boolean tactical) {
+        /**
+         * get the player to move from STATUS
+         */
         int player = (int) board[STATUS] & PLAYER_BIT;
         int playerBit = player << 3;
         int otherBit = 8 ^ playerBit;
