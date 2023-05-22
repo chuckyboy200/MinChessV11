@@ -127,21 +127,36 @@ public class Board {
      */
     public final static int[] gen(long[] board, boolean legal, boolean tactical) {
         /**
-         * get the player to move from STATUS
+         * get the player to move from STATUS, the playerBit (for index into the appropriate bitboard, and the otherBit (for index into the other player's bitboard)
          */
         int player = (int) board[STATUS] & PLAYER_BIT;
         int playerBit = player << 3;
         int otherBit = 8 ^ playerBit;
+        /**
+         * get the occupancy bitboard for all squares on the board and the tactical occupancy, depending on whether only tactical moves are required
+         */
         long allOccupancy = board[playerBit] | board[otherBit];
         long tacticalOccupancy = tactical ? board[otherBit] : ~board[playerBit];
-        int[] moves = new int[100]; // moves[99] = length of moveList
+        /**
+         * create an array of ints to store the moves, the array's max size is set at 100, the last element of the array is the length of the move list
+         */
+        int[] moves = new int[100];
+        /**
+         * generate king moves, knight moves, pawn moves, and slider moves, and store them in the moves array, moveListLength is updated to be the current number of moves in the moves array
+         */
         int moveListLength = getKingMoves(board, moves, Piece.KING | playerBit, player, allOccupancy, tacticalOccupancy, tactical);
         moveListLength = getKnightMoves(board, moves, Piece.KNIGHT | playerBit, moveListLength, tacticalOccupancy);
         moveListLength = getPawnMoves(board, moves, Piece.PAWN | playerBit, moveListLength, player, allOccupancy, board[otherBit], tactical);
-        moveListLength = getSliderMoves(board, moves, player, moveListLength, allOccupancy, tacticalOccupancy);  
+        moveListLength = getSliderMoves(board, moves, player, moveListLength, allOccupancy, tacticalOccupancy);
+        /**
+         * throw an error if there are more moves than can fit in the moves array
+         */
         if(moveListLength > 98) {
             throw new RuntimeException("Move list overflow");
         }
+        /**
+         * set the number of moves in the moves array as the last element of the array
+         */
         moves[99] = moveListLength;
         return moves;
     }
