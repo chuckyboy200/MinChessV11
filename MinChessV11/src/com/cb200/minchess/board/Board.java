@@ -102,6 +102,9 @@ public class Board {
          * get the en passant square from the FEN string
          */
         int eSquare = Fen.getEnPassantSquare(fen);
+        if(!((eSquare > 15 && eSquare < 24) || (eSquare > 39 && eSquare < 40))) {
+            eSquare = Value.NONE;
+        }
         /**
          * set the en passant square bits in STATUS
          */
@@ -168,21 +171,33 @@ public class Board {
      * @return a new board array representing the position after making the move
      */
     public final static long[] makeMove(long[] board, int move) {
+        /*
+         * create a new board array and create copies of the board's bitboards, castling rights, en passant square, half move count, full move count, and Zobrist key as these may be modified by the move
+         */
         long[] newBoard = Arrays.copyOf(board, board.length);
         int castling = (int) (newBoard[STATUS] >>> 1) & 0xf;
         int eSquare = (int) newBoard[STATUS] >>> 5 & 0x3f;
         int halfMoveCount = (int) newBoard[STATUS] >>> 11 & 0x3f;
         int fullMoveCount = (int) newBoard[STATUS] >>> 17 & 0x3f;
         long key = newBoard[KEY];
+        /**
+         * get all piece information from the move
+         */
         int startSquare = move & 0x3f;
         int startPiece = (move >>> 16) & 0xf;
         int startPieceType = startPiece & Piece.TYPE;
         int targetSquare = (move >>> 6) & 0x3f;
         int targetPiece = (move >>> 20) & 0xf;
+        /**
+         * get the player to move from STATUS
+         */
         int player = (int) newBoard[STATUS] & PLAYER_BIT;
-        if(eSquare != Value.INVALID) {
+        /**
+         * reset the en passant square if it is set
+         */
+        if(eSquare != Value.NONE) {
             key ^= Zobrist.ENPASSANT_FILE[eSquare & Value.FILE];
-            eSquare = Value.INVALID;
+            eSquare = Value.NONE;
         }
         switch(startPieceType) {
             case Piece.QUEEN:
