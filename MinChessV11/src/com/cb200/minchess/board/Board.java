@@ -11,42 +11,120 @@ import com.cb200.chessutils.zobrist.Zobrist;
 
 public class Board {
     
+    /**
+     * This is the index in the board array for the board's various statuses as follows:
+     * 1) The player to move (1 bit) 0 = white, 1 = black
+     * 2) Castling rights (4 bits) bit 1 = white king side, bit 2 = white queen side, bit 3 = black king side, bit 4 = black queen side
+     * 3) En passant square (6 bits) no en passant square = 0, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
+     * 4) Half move count (6 bits) the number of half moves since the last capture or pawn move, used for the fifty move rule
+     * 5) Full move count (8 bits) the number of full moves, incremented after black's move
+     * 
+     */
     public final static int STATUS = 15;
+    /**
+     * This is the index in the board array for the board's Zobrist key
+     */
     public final static int KEY = 16;
+    /**
+     * This is used when retrieving the player bit from STATUS
+     */
     public final static int PLAYER_BIT = 1;
+    /**
+     * This is the maximum number of bitboards in the board array
+     */
     private final static int MAX_BITBOARDS = 17;
 
+    /**
+     * This is a utility class and should not be instantiated
+     */
     private Board() {}
 
+    /**
+     * This method returns the player to move, 0 = white, 1 = black
+     * @param board the board array
+     * @return the player to move
+     */
     public final static int player(long[] board) {
         return (int) board[STATUS] & PLAYER_BIT;
     }
 
+    /**
+     * This is a factory method which creates a new board array from a FEN string representing the starting position
+     * @return a new board array representing the starting position
+     */
     public final static long[] startingPosition() {
         return fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
+    /**
+     * This is a factory method which creates a new board array from a FEN string
+     * @param fen the FEN string 
+     * @return a new board array representing the position in the FEN string
+     */
     public final static long[] fromFen(String fen) {
+        /**
+         * create a new empty board array
+         */
         long[] board = new long[MAX_BITBOARDS];
+        /**
+         * get an array of ints representing 64 squares and their contents from the FEN string
+         */
         int[] pieces = Fen.getPieces(fen);
+        /**
+         * loop over the squares on the board
+         */
         for(int square = 0; square < 64; square ++) {
+            /**
+             * if the square is not empty, set the corresponding bit in the appropriate piece bitboard and occupancy bitboard for that player
+             */
             if(pieces[square] != Value.NONE) {
                 board[pieces[square]] |= 1L << square;
                 board[pieces[square] & Value.BLACK_BIT] |= 1L << square;
             }
         }
+        /**
+         * get whether it is white to move from the FEN string
+         */
         boolean whiteToMove = Fen.getWhiteToMove(fen);
+        /**
+         * set the player bit in STATUS
+         */
         board[STATUS] = whiteToMove ? Value.WHITE : Value.BLACK;
+        /**
+         * get the castling rights from the FEN string
+         */
         int castling = Fen.getCastling(fen);
+        /**
+         * set the castling bits in STATUS
+         */
         board[STATUS] ^= castling << 1;
+        /**
+         * get the en passant square from the FEN string
+         */
         int eSquare = Fen.getEnPassantSquare(fen);
+        /**
+         * set the en passant square bits in STATUS
+         */
         board[STATUS] ^= eSquare << 5;
+        /**
+         * get the half move count and full move count from the FEN string and set their bits in STATUS
+         */
         board[STATUS] ^= Fen.getHalfMoveCount(fen) << 11;
         board[STATUS] ^= Fen.getFullMoveCount(fen) << 17;
+        /**
+         * get the Zobrist key and set it in KEY in the board array
+         */
         board[KEY] = Zobrist.getKey(pieces, whiteToMove, (castling & Value.KINGSIDE_BIT[Value.WHITE]) != 0, (castling & Value.QUEENSIDE_BIT[Value.WHITE]) != 0, (castling & Value.KINGSIDE_BIT[Value.BLACK]) != 0, (castling & Value.QUEENSIDE_BIT[Value.BLACK]) != 0, eSquare);
         return board;
     }
 
+    /**
+     * This is a factory method which generates all moves for a given board
+     * @param board the board array
+     * @param legal whether to generate only legal moves
+     * @param tactical whether to generate only tactical moves
+     * @return an array of moves, the array's max size is set at 100, the last element of the array is the length of the move list
+     */
     public final static int[] gen(long[] board, boolean legal, boolean tactical) {
         int player = (int) board[STATUS] & PLAYER_BIT;
         int playerBit = player << 3;
@@ -65,6 +143,12 @@ public class Board {
         return moves;
     }
 
+    /**
+     * This is a factory method which returns a new board array representing the position after making a move
+     * @param board the board array
+     * @param move the move to make
+     * @return a new board array representing the position after making the move
+     */
     public final static long[] makeMove(long[] board, int move) {
         long[] newBoard = Arrays.copyOf(board, board.length);
         int castling = (int) (newBoard[STATUS] >>> 1) & 0xf;
