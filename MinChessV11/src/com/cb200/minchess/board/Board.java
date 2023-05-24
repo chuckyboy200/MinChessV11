@@ -9,32 +9,49 @@ import com.cb200.chessutils.piece.Piece;
 import com.cb200.chessutils.value.Value;
 import com.cb200.chessutils.zobrist.Zobrist;
 
+/**
+ * This class is a static utility class which contains methods which create and manipulate board arrays
+ * Board arrays consist of a set of bitboards (longs) which represent the board's various pieces and their locations, a set of status bits which represent the board's various statuses and a zobrist key
+ * The bitboards are as follows:
+ * [0] and [8] = white and black occupancy respectively
+ * [1] and [9] = white and black king
+ * [2] and [10] = white and black queen
+ * [3] and [11] = white and black rook
+ * [4] and [12] = white and black bishop
+ * [5] and [13] = white and black knight
+ * [6] and [14] = white and black pawn
+ * [7] is unused
+ * [15] = status bits
+ * [16] = 64-bit zobrist key
+ * @author Charles Clark
+ */
 public class Board {
     
-    /**
+    /*
      * This is the index in the board array for the board's various statuses as follows:
-     * 1) The player to move (1 bit) 0 = white, 1 = black
-     * 2) Castling rights (4 bits) bit 1 = white king side, bit 2 = white queen side, bit 3 = black king side, bit 4 = black queen side
-     * 3) En passant square (6 bits) no en passant square = 0, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
-     * 4) Half move count (6 bits) the number of half moves since the last capture or pawn move, used for the fifty move rule
-     * 5) Full move count (8 bits) the number of full moves, incremented after black's move
-     * 
+     * 1) The player to move (bit 0) 0 = white, 1 = black
+     * 2) Castling rights (bits 1-4) bit 1 = white king side, bit 2 = white queen side, bit 3 = black king side, bit 4 = black queen side
+     * 3) En passant square (bits 5-10) no en passant square = 0, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
+     * 4) Half move count (bits 11-16) the number of half moves since the last capture or pawn move, used for the fifty move rule
+     * 5) Full move count (bits 17-24) the number of full moves, incremented after black's move
      */
     public final static int STATUS = 15;
-    /**
+    /*
      * This is the index in the board array for the board's Zobrist key
      */
     public final static int KEY = 16;
-    /**
+    /*
      * This is used when retrieving the player bit from STATUS
      */
     public final static int PLAYER_BIT = 1;
-    /**
+    /*
      * This is the maximum number of bitboards in the board array
      */
     private final static int MAX_BITBOARDS = 17;
 
-    /**
+    private final static String PIECE_STRING = " KQRBNPXXkqrbnp";
+
+    /*
      * This is a utility class and should not be instantiated
      */
     private Board() {}
@@ -83,31 +100,22 @@ public class Board {
             }
         }
         /*
-         * get whether it is white to move from the FEN string
+         * get whether it is white to move from the FEN string and set the player bit in STATUS
          */
         boolean whiteToMove = Fen.getWhiteToMove(fen);
-        /*
-         * set the player bit in STATUS
-         */
         board[STATUS] = whiteToMove ? Value.WHITE : Value.BLACK;
         /*
-         * get the castling rights from the FEN string
+         * get the castling rights from the FEN string and set the castling bits in STATUS
          */
         int castling = Fen.getCastling(fen);
-        /*
-         * set the castling bits in STATUS
-         */
         board[STATUS] ^= castling << 1;
         /*
-         * get the en passant square from the FEN string
+         * get the en passant square from the FEN string and store the en passant square in STATUS. if there is no en passant square, set the en passant square to Value.NONE
          */
         int eSquare = Fen.getEnPassantSquare(fen);
         if(!((eSquare > 15 && eSquare < 24) || (eSquare > 39 && eSquare < 40))) {
             eSquare = Value.NONE;
         }
-        /*
-         * set the en passant square bits in STATUS
-         */
         board[STATUS] ^= eSquare << 5;
         /*
          * get the half move count and full move count from the FEN string and set their bits in STATUS
@@ -115,7 +123,7 @@ public class Board {
         board[STATUS] ^= Fen.getHalfMoveCount(fen) << 11;
         board[STATUS] ^= Fen.getFullMoveCount(fen) << 17;
         /*
-         * get the Zobrist key and set it in KEY in the board array
+         * get the Zobrist key and set it in KEY
          */
         board[KEY] = Zobrist.getKey(pieces, whiteToMove, (castling & Value.KINGSIDE_BIT[Value.WHITE]) != 0, (castling & Value.QUEENSIDE_BIT[Value.WHITE]) != 0, (castling & Value.KINGSIDE_BIT[Value.BLACK]) != 0, (castling & Value.QUEENSIDE_BIT[Value.BLACK]) != 0, eSquare);
         return board;
@@ -181,7 +189,7 @@ public class Board {
         int fullMoveCount = (int) newBoard[STATUS] >>> 17 & 0x3f;
         long key = newBoard[KEY];
         /*
-         * get all piece information from the move
+         * get piece information from the move
          */
         int startSquare = move & 0x3f;
         int startPiece = (move >>> 16) & 0xf;
@@ -215,16 +223,13 @@ public class Board {
                 long targetSquareBit = 1L << targetSquare;
                 long pieceMoveBits = (1L << startSquare) | targetSquareBit;
                 /*
-                 * update the piece bitboard and player occupancy bitboard for the start square and target square
+                 * update the piece bitboard and player occupancy bitboard for the start square and target square by flipping their bits, then update the zobrist key
                  */
                 newBoard[startPiece] ^= pieceMoveBits;
                 newBoard[player << 3] ^= pieceMoveBits;
-                /*
-                 * update the zobrist key
-                 */
                 key ^= Zobrist.PIECE[startPieceType][player][startSquare] ^ Zobrist.PIECE[startPieceType][player][targetSquare];
                 /*
-                 * if the target square is not empty, this is a capture so reset the half move counter and update the target piece bitboard and other player occupancy bitboard for the target square, then update the zobrist key
+                 * if the target square is not empty, this is a capture so reset the half move counter and update the target piece bitboard and other player occupancy bitboard for the target square, and update the zobrist key
                  */
                 if(targetPiece != Value.NONE) {
                     halfMoveCount = 0;
@@ -236,7 +241,7 @@ public class Board {
                 break;
             }
             /*
-             * 
+             * Handle king moves
              */
             case Piece.KING: {
                 /*
@@ -252,7 +257,7 @@ public class Board {
                 newBoard[player << 3] ^= pieceMoveBits;
                 key ^= Zobrist.PIECE[startPieceType][player][startSquare] ^ Zobrist.PIECE[startPieceType][player][targetSquare];
                 /*
-                 * check if castling is possible and update the castling bits in STATUS and the zobrist key if it is
+                 * check if castling is possible and if it is, turn off the castling bits for that player and update the zobrist key
                  */
                 boolean playerKingSideCastling = (castling & Value.KINGSIDE_BIT[player]) != 0;
                 boolean playerQueenSideCastling = (castling & Value.QUEENSIDE_BIT[player]) != 0;
@@ -290,7 +295,7 @@ public class Board {
                 break;
             }
             /*
-             * 
+             * Handle rook moves
              */
             case Piece.ROOK: {
                 /*
@@ -302,7 +307,7 @@ public class Board {
                 newBoard[player << 3] ^= pieceMoveBits;
                 key ^= Zobrist.PIECE[startPieceType][player][startSquare] ^ Zobrist.PIECE[startPieceType][player][targetSquare];
                 /*
-                 * if castling on the rook's side is available, reset it and update the castling bits in STATUS and the zobrist key
+                 * if castling on the rook's side is available, reset it, then update the castling bits and the zobrist key
                  */
                 if((castling & Value.KINGSIDE_BIT[player]) != Value.NONE) {
                     if(startSquare == (player == Value.WHITE ? 7 : 63)) {
@@ -329,14 +334,14 @@ public class Board {
                 break;
             }
             /*
-             * 
+             * Handle pawn moves
              */
             case Piece.PAWN: {
+                long targetSquareBit = 1L << targetSquare;
                 /*
-                 * get the promotion piece from the move, if there is no promotion piece, this is set to 0
+                 * get the promotion piece from the move, if there is no promotion piece, this is equal to 0
                  */
                 int promotePiece = (move >>> 12) & 0xf;
-                long targetSquareBit = 1L << targetSquare;
                 /*
                  * get the player bit for calculations later
                  */
@@ -346,7 +351,7 @@ public class Board {
                  */
                 halfMoveCount = 0;
                 /*
-                 * if a promotion piece exists, update the start piece bitboard and player occupancy bitboard for the start square and the promotion piece bitboard and player occupancy bitboard for the target square, then update the zobrist key
+                 * if there is no promotion piece, perform a normal pawn move
                  */
                 if(promotePiece == Value.NONE) {
                     long pieceMoveBits = (1L << startSquare) | targetSquareBit;
@@ -355,7 +360,7 @@ public class Board {
                     key ^= Zobrist.PIECE[startPieceType][player][startSquare] ^ Zobrist.PIECE[startPieceType][player][targetSquare];
                 } else {
                     /*
-                     * perform a normal pawn move
+                     * A promotion piece exists, so update the start piece bitboard for the start square, the promotion piece bitboard for the target square, and the player occupancy bitboard, then update the zobrist key
                      */
                     long startSquareBit = 1L << startSquare;
                     newBoard[startPiece] ^= startSquareBit;
@@ -375,7 +380,7 @@ public class Board {
                 /*
                  * perform an en passant capture. the difference between this capture and a normal capture is that the captured pawn is on a different square to the target square
                  */
-                if(targetSquare == ((board[STATUS] >>> 5) & 0x3f)) {
+                if(targetSquare == ((board[STATUS] >>> 5) & 0x3f) && targetSquare != Value.NONE) {
                     int other = 1 ^ player;
                     int otherBit = other << 3;
                     int captureSquare = targetSquare + (player == Value.WHITE ? -8 : 8);
@@ -385,7 +390,7 @@ public class Board {
                     key ^= Zobrist.PIECE[Piece.PAWN][other][captureSquare];
                 }
                 /*
-                 * if the pawn advances 2 squares, set the en passant square in STATUS and update the zobrist key
+                 * if the pawn advances 2 squares, set a new en passant square and update the zobrist key
                  */
                 if(Math.abs(startSquare - targetSquare) == 16) {
                     eSquare = startSquare + (player == Value.WHITE ? 8 : -8);
@@ -464,45 +469,124 @@ public class Board {
      */
     public final static boolean isSquareAttackedByPlayer(long[] board, int square, int player) {
         int playerBit = player << 3;
+        /*
+         * check whether a player's knight is attacking this square, if so return true
+         */
         if((B.BB[B.LEAP_ATTACKS][square] & board[Piece.KNIGHT | playerBit]) != 0L) return true;
+        /*
+         * check whether a player's king is attacking this square, if so return true
+         */
         if((B.BB[B.KING_ATTACKS][square] & board[Piece.KING | playerBit]) != 0L) return true;
+        /*
+         * check whether a player's pawn is attacking this square, if so return true
+         */
         if((B.BB[B.PAWN_ATTACKS_PLAYER1 - player][square] & board[Piece.PAWN | playerBit]) != 0L) return true;
+        /*
+         * get the full occupancy of the board for Magic bitboard calculations
+         */
         long allOccupancy = board[Value.WHITE_BIT] | board[Value.BLACK_BIT];
+        /*
+         * check whether a player's bishop or queen is attacking this square on a diagonal, if so return true
+         */
         if((Magic.bishopMoves(square, allOccupancy) & (board[Piece.BISHOP | playerBit] | board[Piece.QUEEN | playerBit])) != 0L) return true;
+        /*
+         * check whether a player's rook or queen is attacking this square on a file or rank, if so return true
+         */
         if((Magic.rookMoves(square, allOccupancy) & (board[Piece.ROOK | playerBit] | board[Piece.QUEEN | playerBit])) != 0L) return true;
+        /*
+         * no piece is attacking this square, return false
+         */
         return false;
     }
 
+    /**
+     * check if a player is in check
+     * @param board the board array
+     * @param player the player to check
+     * @return true if the player is in check, false otherwise
+     */
     public final static boolean isPlayerInCheck(long[] board, int player) {
         int playerBit = player << 3;
         return isSquareAttackedByPlayer(board, Long.numberOfTrailingZeros(board[Piece.KING | playerBit]), 1 ^ player);
-    }   
+    }
 
+    /**
+     * During move generation, add a move to the moves array
+     * @param board the board array
+     * @param moves the moves array
+     * @param startSquare the start square of the move
+     * @param targetSquare the target square of the move
+     * @param moveListLength the current number of moves in the moves array
+     * @param piece the piece being moved
+     */
     private final static void addMove(long[] board, int[] moves, int startSquare, int targetSquare, int moveListLength, int piece) {
         moves[moveListLength] = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
     }
 
+    /**
+     * During move generation, add pawn promotion moves to the moves array
+     * @param board the board array
+     * @param moves the moves array
+     * @param startSquare the start square of the move
+     * @param targetSquare the target square of the move
+     * @param playerBit the player bit
+     * @param moveListLength the current number of moves in the moves array
+     * @param piece the piece being moved
+     */
     private final static void addPromotionMoves(long[] board, int[] moves, int startSquare, int targetSquare, int playerBit, int moveListLength, int piece) {
-        piece <<= 16;
-        int targetPiece = getSquare(board, targetSquare) << 20;
-        targetSquare <<= 6;
-        moves[moveListLength ++] = startSquare | targetSquare | ((Piece.QUEEN | playerBit) << 12) | piece | targetPiece;
-        moves[moveListLength ++] = startSquare | targetSquare | ((Piece.ROOK | playerBit) << 12) | piece | targetPiece;
-        moves[moveListLength ++] = startSquare | targetSquare | ((Piece.BISHOP | playerBit) << 12) | piece | targetPiece;
-        moves[moveListLength] = startSquare | targetSquare | ((Piece.KNIGHT | playerBit) << 12) | piece | targetPiece;
+        int moveInfo = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
+        moves[moveListLength ++] = moveInfo | ((Piece.QUEEN | playerBit) << 12);
+        moves[moveListLength ++] = moveInfo | ((Piece.ROOK | playerBit) << 12);
+        moves[moveListLength ++] = moveInfo | ((Piece.BISHOP | playerBit) << 12);
+        moves[moveListLength ++] = moveInfo | ((Piece.KNIGHT | playerBit) << 12);
     }
 
+    /**
+     * generate king moves
+     * @param board the board array
+     * @param moves the moves array
+     * @param piece the king piece
+     * @param player the player to move
+     * @param allOccupancy the occupancy of all squares on the board
+     * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
+     * @param tactical whether to generate only tactical moves
+     * @return the number of moves in the moves array after king moves have been generated
+     */
     private final static int getKingMoves(long[] board, int[] moves, int piece, int player, long allOccupancy, long tacticalOccupancy, boolean tactical) {
+        /*
+         * since king generation is first, there are no moves in the moves array and so moveListLength is 0
+         */
         int moveListLength = 0;
+        /*
+         * get the king square from the king bitboard
+         */
         int square = Long.numberOfTrailingZeros(board[piece]);
+        /*
+         * get all squares that the king attacks. if tactical is true, only get the squares that are occupied by the other player's pieces, otherwise get all squares not occupied by the player's pieces
+         */
         long attacks = B.BB[B.KING_ATTACKS][square] & tacticalOccupancy;
+        /*
+         * loop over each bit in the attacks bitboard
+         */
         for(; attacks != 0L; attacks &= attacks - 1L) {
+            /*
+             * add a move to the moves array for the king moving from the king square to the square of the bit in the attacks bitboard and increment moveListLength
+             */
             addMove(board, moves, square, Long.numberOfTrailingZeros(attacks), moveListLength ++, piece);
         }
+        /*
+         * if tactical is true, don't handle castling and return early
+         */
         if(tactical) return moveListLength;
+        /*
+         * get the castling rights from STATUS and check whether castling is possible on kingside and queenside
+         */
         int castling = (int) (board[STATUS] >>> 1) & 0xf;
         boolean kingSide = (castling & Value.KINGSIDE_BIT[player]) != Value.NONE;
         boolean queenSide = (castling & Value.QUEENSIDE_BIT[player]) != Value.NONE;
+        /*
+         * if either side has castling rights, check whether the squares between the king and rook are empty and whether the squares that the king moves through are attacked by the other player. if so, add a castling move to the moves array and increment moveListLength
+         */
         if((kingSide || queenSide)) {
             int other = 1 ^ player;
             if(!isSquareAttackedByPlayer(board, square, other)) {
@@ -521,36 +605,105 @@ public class Board {
         return moveListLength;
     }
 
+    /**
+     * generate knight moves
+     * @param board the board array
+     * @param moves the moves array
+     * @param piece the knight piece
+     * @param moveListLength the current number of moves in the moves array
+     * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
+     * @return the number of moves in the moves array after knight moves have been generated
+     */
     private final static int getKnightMoves(long[] board, int[] moves, int piece, int moveListLength, long tacticalOccupancy) {
+        /*
+         * get the knight bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a knight on it
+         */
         long knightBitboard = board[piece];
         for(; knightBitboard != 0L; knightBitboard &= knightBitboard - 1) {
+            /*
+             * get the square of the knight
+             */
             int square = Long.numberOfTrailingZeros(knightBitboard);
+            /*
+             * get all squares that the knight attacks and loop over each set bit in the bitboard, where each set bit represents a square that the knight attacks
+             */
             long attacks = B.BB[B.LEAP_ATTACKS][square] & tacticalOccupancy;
             for(; attacks != 0L; attacks &= attacks - 1) {
+                /*
+                 * add a move to the moves array for the knight moving from the knight square to the square of the bit in the attacks bitboard and increment moveListLength 
+                 */
                 addMove(board, moves, square, Long.numberOfTrailingZeros(attacks), moveListLength ++, piece);
             }
         }
         return moveListLength;
     }
 
+    /**
+     * generate pawn moves
+     * @param board the board array
+     * @param moves the moves array
+     * @param piece the pawn piece
+     * @param moveListLength the current number of moves in the moves array
+     * @param player the player to move
+     * @param allOccupancy the occupancy of all squares on the board
+     * @param otherOccupancy the occupancy of all squares on the board for the other player
+     * @param tactical whether to generate only tactical moves
+     * @return 
+     */
     private final static int getPawnMoves(long[] board, int[] moves, int piece, int moveListLength, int player, long allOccupancy, long otherOccupancy, boolean tactical) {
+        /*
+         * get the pawn bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a pawn on it
+         */
         long pawnBitboard = board[piece];
+        /*
+         * get the player bit for calculations later
+         */
         int playerBit = player << 3;
         for(; pawnBitboard != 0L; pawnBitboard &= pawnBitboard - 1) {
+            /*
+             * get the square of the pawn
+             */
             int square = Long.numberOfTrailingZeros(pawnBitboard);
+            /*
+             * initialize and set the attacks bitboard to 0
+             */
             long attacks = 0L;
+            /*
+             * if tactical is false, get possible single pawn pushes. get double pawn pushes if relevant
+             */
             if(!tactical) {
+                /*
+                 * get single pawn pushes
+                 */
                 attacks = B.BB[B.PAWN_ADVANCE_1_PLAYER0 + player][square] & ~allOccupancy;
                 if(attacks != 0L) {
+                    /*
+                     * if there is a single pawn push, get double pawn pushes if relevant
+                     */
                     attacks |= B.BB[B.PAWN_ADVANCE_2_PLAYER0 + player][square] & ~allOccupancy;
                 }
             }
+            /*
+             * get the en passant square from STATUS
+             */
             int eSquare = (int) board[STATUS] >>> 5 & 0x3f;
-            otherOccupancy |= (eSquare != Value.INVALID ? (1L << eSquare) : 0L);
+            /*
+             * add the en passant square to the other occupancy bitboard if it is set, as this is a square that the pawn can attack
+             */
+            otherOccupancy |= (eSquare != Value.NONE ? (1L << eSquare) : 0L);
             attacks |= B.BB[B.PAWN_ATTACKS_PLAYER0 + player][square] & otherOccupancy;
+            /*
+             * loop over each set bit in the attacks bitboard, where each set bit represents a square that the pawn attacks
+             */
             for(; attacks != 0L; attacks &= attacks - 1) {
+                /*
+                 * get the target square of the attack and the rank of the target square
+                 */
                 int targetSquare = Long.numberOfTrailingZeros(attacks);
                 int targetRank = targetSquare >>> 3;
+                /*
+                 * if the target rank is a pawn promotion rank, add a pawn promotion move to the moves array, otherwise add a normal pawn move to the moves array
+                 */
                 if(targetRank == 0 || targetRank == 7) {
                     addPromotionMoves(board, moves, square, targetSquare, playerBit, moveListLength, Piece.PAWN | playerBit);
                     moveListLength += 4;
@@ -562,9 +715,28 @@ public class Board {
         return moveListLength;
     }
 
+    /**
+     * generate slider moves for queens, rooks and bishops
+     * @param board the board array
+     * @param moves the moves array
+     * @param player the player to move
+     * @param moveListLength the current number of moves in the moves array
+     * @param allOccupancy the occupancy of all squares on the board
+     * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
+     * @return the number of moves in the moves array after slider moves have been generated
+     */
     private final static int getSliderMoves(long[] board, int[] moves, int player, int moveListLength, long allOccupancy, long tacticalOccupancy) {
+        /*
+         * get the player bit for calculations later
+         */
         int playerBit = player << 3;
+        /*
+         * get the bitboard of all sliders for the player 
+         */
         long sliderBitboard = board[Piece.QUEEN | playerBit] | board[Piece.ROOK | playerBit] | board[Piece.BISHOP | playerBit];
+        /*
+         * loop over each set bit in the bitboard, where each set bit represents a square with a slider on it 
+         */
         for(; sliderBitboard != 0L; sliderBitboard &= sliderBitboard - 1) {
             int square = Long.numberOfTrailingZeros(sliderBitboard);
             int piece = getSquare(board, square);
@@ -601,7 +773,27 @@ public class Board {
     }
 
     public final static String moveString(int move) {
-        return Value.FILE_STRING.charAt(move & Value.FILE) + Integer.toString(((move & 0x3f) >>> 3) + 1) + Value.FILE_STRING.charAt((move >>> 6) & Value.FILE) + Integer.toString(((move >>> 6 & 0x3f) >>> 3) + 1);
+        int promotePiece = (move >>> 12) & 0xf;
+        return Value.FILE_STRING.charAt(move & Value.FILE) + Integer.toString(((move & 0x3f) >>> 3) + 1) + Value.FILE_STRING.charAt((move >>> 6) & Value.FILE) + Integer.toString(((move >>> 6 & 0x3f) >>> 3) + 1) + (promotePiece == Value.NONE ? "" : Piece.SHORT_STRING[promotePiece].toUpperCase());
+    }
+
+    public final static int parseMove(long[] board, String moveString) {
+        int startSquare = Value.FILE_STRING.indexOf(moveString.charAt(0)) + ((Character.getNumericValue(moveString.charAt(1)) - 1) << 3);
+        int targetSquare = Value.FILE_STRING.indexOf(moveString.charAt(2)) + ((Character.getNumericValue(moveString.charAt(3)) - 1) << 3);
+        int promotePiece = 0;
+        if(moveString.length() > 4) {
+            promotePiece = PIECE_STRING.indexOf(moveString.charAt(4));
+        }
+        return startSquare | (targetSquare << 6) | (promotePiece << 12) | (getSquare(board, startSquare) << 16) | (getSquare(board, targetSquare) << 20); 
+    }
+
+    public final static String moveStringVerbose(int move) {
+        int startSquare = move & 0x3f;
+        int targetSquare = (move >>> 6) & 0x3f;
+        int promotePiece = (move >>> 12) & 0xf;
+        int startPiece = (move >>> 16) & 0xf;
+        int targetPiece = (move >>> 20) & 0xf;
+        return Piece.SHORT_STRING[startPiece] + "[" + startSquare + "] " + Piece.SHORT_STRING[targetPiece] + "[" + targetSquare + "] " + Piece.SHORT_STRING[promotePiece] + "[" + promotePiece + "]";
     }
 
 }
