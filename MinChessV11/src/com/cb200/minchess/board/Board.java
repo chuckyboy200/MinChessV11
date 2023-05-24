@@ -427,6 +427,21 @@ public class Board {
     }
 
     /**
+     * This method makes a null move on the board, and returns the new board array. This shouldn't be used twice in a row and not while the current player is in check
+     * @param board the board array
+     * @param move the move to make 
+     * @return the new board array
+     */
+    public final static long[] nullMove(long[] board, int move) {
+        /*
+         * a null move is where a player makes a second move in a row without the opponent making a move
+        * to set this up, we are passed a board where normally a player would make the next move but we flip the player bit and reset the en passant square since an en passant move is not possible in a null move
+        */
+        board[STATUS] = (board[STATUS] ^ 1) & ~0x7e0;
+        return board;
+    }
+
+    /**
      * This method returns the contents of a square on the board
      * @param board the board array
      * @param square the square to get the contents of
