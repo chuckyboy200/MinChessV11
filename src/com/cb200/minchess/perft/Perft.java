@@ -1,6 +1,7 @@
 package com.cb200.minchess.perft;
 
 import com.cb200.minchess.board.Board;
+import com.cb200.minchess.gui.views.Gui;
 
 public class Perft {
 
@@ -70,13 +71,13 @@ public class Perft {
         elapsedTime = 0;
         long totalTime = 0;
         for(int positionNumber = firstPosition; positionNumber <= lastPosition; positionNumber ++) {
-            System.out.println(POSITION_NAME[positionNumber]);
+            println(POSITION_NAME[positionNumber]);
             long thisPositionTotal = fen(POSITION_FEN[positionNumber], POSITION_PERFT_DEPTH[positionNumber]);
             totalTime += elapsedTime;
             if(thisPositionTotal == POSITION_PERFT_VALUE[positionNumber]) {
-                System.out.println("Passed\n");
+                println("Passed\n");
             } else {
-                System.out.println("Failed ( " + POSITION_PERFT_VALUE[positionNumber] + " ( " + (POSITION_PERFT_VALUE[positionNumber] - thisPositionTotal) + " ) )\n");
+                println("Failed ( " + POSITION_PERFT_VALUE[positionNumber] + " ( " + (POSITION_PERFT_VALUE[positionNumber] - thisPositionTotal) + " ) )\n");
             }
             if(positionNumber < lastPosition) {
                 try {
@@ -86,20 +87,20 @@ public class Perft {
                 }
             }
         }
-        System.out.println("Done\n");
+        println("Done\n");
         return totalTime;
     }
 
     public final static long fen(String fen, int depth) {
         long[] board = Board.fromFen(fen);
-        System.out.println("\"" + fen + "\"");
+        println("\"" + fen + "\"");
         Board.drawText(board);
         return perftPositionSpeed(board, depth);
     }
 
     public final static long fen(String fen, String moveString, int depth) {
         long[] board = Board.fromFen(fen);
-        System.out.println("\"" + fen + "\"");
+        println("\"" + fen + "\"");
         Board.drawText(board);
         return perftPositionDebug(board, depth, moveString + (moveString.length() == 4 ? " " : ""));
     }
@@ -113,11 +114,13 @@ public class Perft {
             currentTime = System.currentTimeMillis();
             nodes = perftSearchSpeed(board, depth, maxDepth, maxNum);
             elapsedTime = System.currentTimeMillis() - currentTime;
-            System.out.println("Positions for depth " + depth + "/" + maxDepth + " = " + nodes + " Elapsed: " + (elapsedTime));
+            println("Positions for depth " + depth + "/" + maxDepth + " = " + nodes + " Elapsed: " + (elapsedTime));
             if(depth == 1) {
                 maxNum = (int) nodes;
             }
             if(depth == maxDepth) {
+                double nodesPerSecond = elapsedTime == 0 ? nodes : nodes / elapsedTime;
+                println("Nodes per second: " + nodesPerSecond + " mil");
                 total = nodes;
             }
         }
@@ -139,13 +142,13 @@ public class Perft {
             if(Board.isPlayerInCheck(boardAfterMove, player)) continue;
             if(depth == maxDepth) {
                 moveString = Board.moveString(moves[move]);
-                System.out.print(" " + ((++ legalMoveNum <= 9) ? " " : "") + legalMoveNum + "/" + maxNum + " " + (moveString.length() == 4 ? " " : "") + moveString + ": ");
+                print(" " + ((++ legalMoveNum <= 9) ? " " : "") + legalMoveNum + "/" + maxNum + " " + (moveString.length() == 4 ? " " : "") + moveString + ": ");
             }
             tempNodes = nodes;
             currentTime = System.currentTimeMillis();
             nodes += perftSearchSpeed(boardAfterMove, depth - 1, maxDepth, maxNum);
             if(depth == maxDepth) {
-                System.out.println("" + (nodes - tempNodes) + "   Elapsed: " + (System.currentTimeMillis() - currentTime));
+                println("" + (nodes - tempNodes) + "   Elapsed: " + (System.currentTimeMillis() - currentTime));
             }
         }
         return nodes;
@@ -154,7 +157,7 @@ public class Perft {
     private static final long perftPositionDebug(long[] board, int maxDepth, String moveString) {
         for(int i = 0; i < moveString.length(); i += 5) {
             int move = Board.parseMove(board, moveString.substring(i, i + 5));
-            System.out.println("Making move: " + Board.moveString(move) + " " + Board.moveStringVerbose(move));
+            println("Making move: " + Board.moveString(move) + " " + Board.moveStringVerbose(move));
             board = Board.makeMove(board, move | (Board.getSquare(board, move & 0x3f) << 16));
             Board.drawText(board);
         }
@@ -166,7 +169,7 @@ public class Perft {
             currentTime = System.currentTimeMillis();
             nodes = perftSearchSpeed(board, depth, maxDepth, maxNum);
             elapsedTime = System.currentTimeMillis() - currentTime;
-            System.out.println("Positions for depth " + depth + "/" + maxDepth + " = " + nodes + " Elapsed: " + (elapsedTime));
+            println("Positions for depth " + depth + "/" + maxDepth + " = " + nodes + " Elapsed: " + (elapsedTime));
             if(depth == 1) {
                 maxNum = (int) nodes;
             }
@@ -175,6 +178,62 @@ public class Perft {
             }
         }
         return total;
+    }
+
+    private static final long perftPositionLegal(long[] board, int maxDepth) {
+        int maxNum = 0;
+        long currentTime = 0L;
+        long nodes = 0L;
+        long total = 0L;
+        for(int depth = 1; depth <= maxDepth; depth ++) {
+            currentTime = System.currentTimeMillis();
+            nodes = perftSearchLegal(board, depth, maxDepth, maxNum);
+            elapsedTime = System.currentTimeMillis() - currentTime;
+            println("Positions for depth " + depth + "/" + maxDepth + " = " + nodes + " Elapsed: " + (elapsedTime));
+            if(depth == 1) {
+                maxNum = (int) nodes;
+            }
+            if(depth == maxDepth) {
+                double nodesPerSecond = elapsedTime == 0 ? nodes : nodes / elapsedTime;
+                println("Nodes per second: " + nodesPerSecond + " mil");
+                total = nodes;
+            }
+        }
+        return total;
+    }
+
+    private final static long perftSearchLegal(long[] board, int depth, int maxDepth, int maxNum) {
+        if(depth == 0) return 1;
+        long nodes = 0L;
+        long tempNodes = 0L;
+        int[] moves = Board.gen(board, true, false);
+        int maxMoves = moves[99];
+        int legalMoveNum = 0;
+        String moveString = "";
+        long currentTime = 0L;
+        for(int move = 0; move < maxMoves; move ++) {
+            long[] boardAfterMove = Board.makeMove(board, moves[move]);
+            if(depth == maxDepth) {
+                moveString = Board.moveString(moves[move]);
+                print(" " + ((++ legalMoveNum <= 9) ? " " : "") + legalMoveNum + "/" + maxNum + " " + (moveString.length() == 4 ? " " : "") + moveString + ": ");
+            }
+            tempNodes = nodes;
+            currentTime = System.currentTimeMillis();
+            nodes += perftSearchLegal(boardAfterMove, depth - 1, maxDepth, maxNum);
+            if(depth == maxDepth) {
+                println("" + (nodes - tempNodes) + "   Elapsed: " + (System.currentTimeMillis() - currentTime));
+            }
+        }
+        return nodes;
+    }
+
+    private static void println(String text) {
+        print(text + "\n");
+    }
+
+    private static void print(String text) {
+        Gui.print(text, false);
+        System.out.print(text);
     }
 
 }
