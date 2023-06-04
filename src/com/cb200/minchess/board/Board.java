@@ -20,36 +20,37 @@ import com.cb200.chessutils.zobrist.Zobrist;
  * [4] and [12] = white and black bishop
  * [5] and [13] = white and black knight
  * [6] and [14] = white and black pawn
- * [7] is unused
- * [15] = status bits
- * [16] = 64-bit zobrist key
+ * [7] = status bits
+ * [15] = 64-bit zobrist key
  * @author Charles Clark
  */
 public class Board {
     
     /*
-     * This is the index in the board array for the board's various statuses as follows:
+     * This is the index in the board array for the board's various status bits as follows:
      * 1) The player to move (bit 0) 0 = white, 1 = black
      * 2) Castling rights (bits 1-4) bit 1 = white king side, bit 2 = white queen side, bit 3 = black king side, bit 4 = black queen side
      * 3) En passant square (bits 5-10) no en passant square = 0, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
      * 4) Half move count (bits 11-16) the number of half moves since the last capture or pawn move, used for the fifty move rule
      * 5) Full move count (bits 17-24) the number of full moves, incremented after black's move
      */
-    public final static int STATUS = 15;
-    /*
-     * This is the index in the board array for the board's Zobrist key
-     */
-    public final static int KEY = 16;
-    /*
-     * This is used when retrieving the player bit from STATUS
-     */
-    public final static int PLAYER_BIT = 1;
+    public static final int STATUS = 7;
     /*
      * This is the maximum number of bitboards in the board array
      */
-    private final static int MAX_BITBOARDS = 17;
-
-    private final static String PIECE_STRING = " KQRBNPXXkqrbnp";
+    public static final int MAX_BITBOARDS = 16;
+    /*
+     * This is the index in the board array for the board's Zobrist key
+     */
+    public static final int KEY = MAX_BITBOARDS - 1;
+    /*
+     * This is used when retrieving the player bit from STATUS
+     */
+    public static final int PLAYER_BIT = 1;
+    /**
+     * This is a string used in the parseMove method 
+     */
+    private static final String PIECE_STRING = " KQRBNPXXkqrbnp";
 
     /*
      * This is a utility class and should not be instantiated
@@ -61,7 +62,7 @@ public class Board {
      * @param board the board array
      * @return the player to move
      */
-    public final static int player(long[] board) {
+    public static final int player(long[] board) {
         return (int) board[STATUS] & PLAYER_BIT;
     }
 
@@ -69,7 +70,7 @@ public class Board {
      * This is a factory method which creates a new board array from a FEN string representing the starting position
      * @return a new board array representing the starting position
      */
-    public final static long[] startingPosition() {
+    public static final long[] startingPosition() {
         return fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
@@ -78,7 +79,7 @@ public class Board {
      * @param fen the FEN string 
      * @return a new board array representing the position in the FEN string
      */
-    public final static long[] fromFen(String fen) {
+    public static final long[] fromFen(String fen) {
         /*
          * create a new empty board array
          */
@@ -136,7 +137,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return an array of moves, the array's max size is set at 100, the last element of the array is the length of the move list
      */
-    public final static int[] gen(long[] board, boolean legal, boolean tactical) {
+    public static final int[] gen(long[] board, boolean legal, boolean tactical) {
         /*
          * get the player to move from STATUS, the playerBit (for index into the appropriate bitboard, and the otherBit (for index into the other player's bitboard)
          */
@@ -169,7 +170,20 @@ public class Board {
          * set the last element in the moves array to the length of the move list
          */
         moves[99] = moveListLength;
-        return moves;
+        return legal ? purgeIllegalMoves(board, moves) : moves;
+    }
+
+    private static final int[] purgeIllegalMoves(long[] board, int[] moves) {
+        int[] legalMoves = new int[100];
+        int legalMoveCount = 0;
+        for(int move = 0; move < moves[99]; move ++) {
+            long[] boardAfterMove = Board.makeMove(board, moves[move]);
+            if(!Board.isPlayerInCheck(boardAfterMove, (int) board[STATUS] & 0x1)) {
+                legalMoves[legalMoveCount ++] = moves[move];
+            }
+        }
+        legalMoves[99] = legalMoveCount;
+        return legalMoves;
     }
 
     /**
@@ -178,7 +192,7 @@ public class Board {
      * @param move the move to make
      * @return a new board array representing the position after making the move
      */
-    public final static long[] makeMove(long[] board, int move) {
+    public static final long[] makeMove(long[] board, int move) {
         /*
          * create a new board array and create copies of the board's bitboards, castling rights, en passant square, half move count, full move count, and Zobrist key as these may be modified by the move
          */
@@ -432,7 +446,7 @@ public class Board {
      * @param move the move to make 
      * @return the new board array
      */
-    public final static long[] nullMove(long[] board, int move) {
+    public static final long[] nullMove(long[] board, int move) {
         /*
          * a null move is where a player makes a second move in a row without the opponent making a move
         * to set this up, we are passed a board where normally a player would make the next move but we flip the player bit and reset the en passant square since an en passant move is not possible in a null move
@@ -447,7 +461,7 @@ public class Board {
      * @param square the square to get the contents of
      * @return the contents of the square, an empty square returns Value.NONE
      */
-    public final static int getSquare(long[] board, int square) {
+    public static final int getSquare(long[] board, int square) {
         /*
          * get the bitboard representation of the square
          */
@@ -482,7 +496,7 @@ public class Board {
      * @param player the player to check is attacking the square
      * @return true if the square is attacked by the player, false otherwise
      */
-    public final static boolean isSquareAttackedByPlayer(long[] board, int square, int player) {
+    public static final boolean isSquareAttackedByPlayer(long[] board, int square, int player) {
         int playerBit = player << 3;
         /*
          * check whether a player's knight is attacking this square, if so return true
@@ -520,9 +534,8 @@ public class Board {
      * @param player the player to check
      * @return true if the player is in check, false otherwise
      */
-    public final static boolean isPlayerInCheck(long[] board, int player) {
-        int playerBit = player << 3;
-        return isSquareAttackedByPlayer(board, Long.numberOfTrailingZeros(board[Piece.KING | playerBit]), 1 ^ player);
+    public static final boolean isPlayerInCheck(long[] board, int player) {
+        return isSquareAttackedByPlayer(board, Long.numberOfTrailingZeros(board[Piece.KING | (player << 3)]), 1 ^ player);
     }
 
     /**
@@ -534,7 +547,7 @@ public class Board {
      * @param moveListLength the current number of moves in the moves array
      * @param piece the piece being moved
      */
-    private final static void addMove(long[] board, int[] moves, int startSquare, int targetSquare, int moveListLength, int piece) {
+    private static final void addMove(long[] board, int[] moves, int startSquare, int targetSquare, int moveListLength, int piece) {
         moves[moveListLength] = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
     }
 
@@ -548,12 +561,12 @@ public class Board {
      * @param moveListLength the current number of moves in the moves array
      * @param piece the piece being moved
      */
-    private final static void addPromotionMoves(long[] board, int[] moves, int startSquare, int targetSquare, int playerBit, int moveListLength, int piece) {
+    private static final void addPromotionMoves(long[] board, int[] moves, int startSquare, int targetSquare, int playerBit, int moveListLength, int piece) {
         int moveInfo = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
-        moves[moveListLength ++] = moveInfo | ((Piece.QUEEN | playerBit) << 12);
         moves[moveListLength ++] = moveInfo | ((Piece.ROOK | playerBit) << 12);
         moves[moveListLength ++] = moveInfo | ((Piece.BISHOP | playerBit) << 12);
         moves[moveListLength ++] = moveInfo | ((Piece.KNIGHT | playerBit) << 12);
+        moves[moveListLength ++] = moveInfo | ((Piece.QUEEN | playerBit) << 12);
     }
 
     /**
@@ -567,7 +580,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return the number of moves in the moves array after king moves have been generated
      */
-    private final static int getKingMoves(long[] board, int[] moves, int piece, int player, long allOccupancy, long tacticalOccupancy, boolean tactical) {
+    private static final int getKingMoves(long[] board, int[] moves, int piece, int player, long allOccupancy, long tacticalOccupancy, boolean tactical) {
         /*
          * since king generation is first, there are no moves in the moves array and so moveListLength is 0
          */
@@ -629,7 +642,7 @@ public class Board {
      * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
      * @return the number of moves in the moves array after knight moves have been generated
      */
-    private final static int getKnightMoves(long[] board, int[] moves, int piece, int moveListLength, long tacticalOccupancy) {
+    private static final int getKnightMoves(long[] board, int[] moves, int piece, int moveListLength, long tacticalOccupancy) {
         /*
          * get the knight bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a knight on it
          */
@@ -665,7 +678,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return 
      */
-    private final static int getPawnMoves(long[] board, int[] moves, int piece, int moveListLength, int player, long allOccupancy, long otherOccupancy, boolean tactical) {
+    private static final int getPawnMoves(long[] board, int[] moves, int piece, int moveListLength, int player, long allOccupancy, long otherOccupancy, boolean tactical) {
         /*
          * get the pawn bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a pawn on it
          */
@@ -740,7 +753,7 @@ public class Board {
      * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
      * @return the number of moves in the moves array after slider moves have been generated
      */
-    private final static int getSliderMoves(long[] board, int[] moves, int player, int moveListLength, long allOccupancy, long tacticalOccupancy) {
+    private static final int getSliderMoves(long[] board, int[] moves, int player, int moveListLength, long allOccupancy, long tacticalOccupancy) {
         /*
          * get the player bit for calculations later
          */
@@ -766,11 +779,11 @@ public class Board {
         return moveListLength;
     }
 
-    public final static void drawText(long[] board) {
+    public static final void drawText(long[] board) {
         System.out.println(boardString(board));
     }
 
-    public final static String boardString(long[] board) {
+    public static final String boardString(long[] board) {
         String boardString = "";
         for(int rank = 7; rank >= 0; rank --) {
 			for(int file = 0; file < 8; file ++) {
@@ -787,22 +800,135 @@ public class Board {
         return boardString;
     }
 
-    public final static String moveString(int move) {
+    public static final String moveString(int move) {
         int promotePiece = (move >>> 12) & 0xf;
         return Value.FILE_STRING.charAt(move & Value.FILE) + Integer.toString(((move & 0x3f) >>> 3) + 1) + Value.FILE_STRING.charAt((move >>> 6) & Value.FILE) + Integer.toString(((move >>> 6 & 0x3f) >>> 3) + 1) + (promotePiece == Value.NONE ? "" : Piece.SHORT_STRING[promotePiece].toUpperCase());
     }
 
-    public final static int parseMove(long[] board, String moveString) {
-        int startSquare = Value.FILE_STRING.indexOf(moveString.charAt(0)) + ((Character.getNumericValue(moveString.charAt(1)) - 1) << 3);
-        int targetSquare = Value.FILE_STRING.indexOf(moveString.charAt(2)) + ((Character.getNumericValue(moveString.charAt(3)) - 1) << 3);
-        int promotePiece = 0;
-        if(moveString.length() > 4) {
-            promotePiece = PIECE_STRING.indexOf(moveString.charAt(4));
-        }
-        return startSquare | (targetSquare << 6) | (promotePiece << 12) | (getSquare(board, startSquare) << 16) | (getSquare(board, targetSquare) << 20); 
+    public static final String moveNotationString(long[] board, int move) {
+        int startSquare = move & 0x3f;
+        int startFile = startSquare & Value.FILE;
+        int startRank = startSquare >>> 3;
+        int targetSquare = (move >>> 6) & 0x3f;
+        int targetFile = targetSquare & Value.FILE;
+        int targetRank = targetSquare >>> 3;
+        int startPiece = (move >>> 16) & 0xf;
+        long pieceBitboard = board[startPiece];
+        int startType = startPiece & Piece.TYPE;
+		int player = startPiece >>> 3;
+        int targetPiece = (move >>> 20) & 0xf;
+        int promotePiece = (move >>> 12) & 0xf;
+        boolean isEnPassant = (targetSquare != 0 && ((board[Board.STATUS] >>> 5) & 0x3f) == targetSquare);
+        long allOccupancy = board[Value.WHITE_BIT] | board[Value.BLACK_BIT];
+        String notation = "";
+		switch(startType) {
+			case Piece.KING: {
+				if(Math.abs(startSquare - targetSquare) == 2) {
+					return "O-O" + (targetFile == Value.FILE_G ? "" : "-O");
+				}
+				notation = "K";
+				break;
+			}
+            case Piece.QUEEN: {
+                notation = "Q";
+                long queensAttackTargetSquare = Magic.queenMoves(targetSquare, allOccupancy) & pieceBitboard;
+                if(queensAttackTargetSquare > 1L) {
+                    int queensOnFile = Long.bitCount(queensAttackTargetSquare & B.BB[B.FILE][targetFile]);
+                    int queensOnRank = Long.bitCount(queensAttackTargetSquare & B.BB[B.RANK][targetRank]);
+                    int queensOnDiagonals = Long.bitCount(queensAttackTargetSquare & (B.BB[B.DIAGONAL_ATTACKS][targetSquare]));
+                    if(queensOnRank > 1) {
+                        notation += Value.FILE_STRING.charAt(startFile);
+                    }
+                    if(queensOnFile > 1) {
+                        notation += Integer.toString(startRank + 1);
+                    }
+                    if(notation.length() == 1 && queensOnDiagonals > 1) {
+                        notation += Value.FILE_STRING.charAt(startFile);
+                    }
+                }
+                break;
+            }
+			case Piece.ROOK: {
+				notation = "R";
+				long rooksAttackTargetSquare = Magic.rookMoves(targetSquare, allOccupancy) & pieceBitboard;
+                if(rooksAttackTargetSquare > 1L) {
+                    int rooksOnFile = Long.bitCount(rooksAttackTargetSquare & B.BB[B.FILE][targetFile]);
+                    int rooksOnRank = Long.bitCount(rooksAttackTargetSquare & B.BB[B.RANK][targetRank]);
+                    if(rooksOnRank > 1) {
+                        notation += Value.FILE_STRING.charAt(startFile);
+                    }
+                    if(rooksOnFile > 1) {
+                        notation += Integer.toString(startRank + 1);
+                    }
+                }
+				break;
+			}
+			case Piece.BISHOP: {
+				notation = "B";
+				long bishopsAttackTargetSquare = Magic.bishopMoves(targetSquare, allOccupancy) & pieceBitboard;
+                if(bishopsAttackTargetSquare > 1L) {
+                    int bishopsOnFile = Long.bitCount(bishopsAttackTargetSquare & B.BB[B.FILE][targetFile]);
+                    int bishopsOnRank = Long.bitCount(bishopsAttackTargetSquare & B.BB[B.RANK][targetRank]);
+                    int bishopsOnDiagonals = Long.bitCount(bishopsAttackTargetSquare & (B.BB[B.DIAGONAL_ATTACKS][targetSquare]));
+                    if(bishopsOnRank > 1) {
+                        notation += Value.FILE_STRING.charAt(startFile);
+                    }
+                    if(bishopsOnFile > 1) {
+                        notation += Integer.toString(startRank + 1);
+                    }
+                    if(notation.length() == 1 && bishopsOnDiagonals > 1) {
+                        notation += Value.FILE_STRING.charAt(startFile);
+                    }
+                }
+				break;
+			}
+			case Piece.KNIGHT: {
+				notation = "N";
+				if(Long.bitCount(B.BB[B.LEAP_ATTACKS][targetSquare] & pieceBitboard) > 1) {
+                    if(Long.bitCount(B.BB[B.RANK][startRank] & pieceBitboard) > 1){
+						notation += Value.FILE_STRING.charAt(startFile);
+					}
+					if(Long.bitCount(B.BB[B.FILE][startFile] & pieceBitboard) > 1) {
+						notation += Integer.toString(startRank + 1);
+					} 
+				}
+				break;
+			}
+			case Piece.PAWN:
+            default: {
+				notation = "";
+                break;
+			}
+		}
+		if(targetPiece != Value.NONE || isEnPassant) {
+			if(startType == Piece.PAWN) {
+				notation += Value.FILE_STRING.charAt(startFile);
+			}
+			notation += "x";
+		}
+		notation += Value.FILE_STRING.charAt(targetFile) + Integer.toString(targetRank + 1);
+		if(promotePiece != Value.NONE) {
+			notation += "=";
+			switch(promotePiece & Piece.TYPE) {
+				case Piece.QUEEN: notation += "Q"; break;
+				case Piece.ROOK: notation += "R"; break;
+				case Piece.BISHOP: notation += "B"; break;
+				case Piece.KNIGHT: notation += "N"; break;
+			}
+		}
+        long[] tempBoard = Board.makeMove(board, move);
+		if(Board.isPlayerInCheck(tempBoard, 1 ^ player)) {
+			int[] moves = Board.gen(tempBoard, true, false);
+			if(moves[99] == 0) {
+				notation += "#";
+			} else {
+				notation += "+";
+			}
+		}
+		return notation;
     }
 
-    public final static String moveStringVerbose(int move) {
+    public static final String moveStringVerbose(int move) {
         int startSquare = move & 0x3f;
         int targetSquare = (move >>> 6) & 0x3f;
         int promotePiece = (move >>> 12) & 0xf;
@@ -811,4 +937,13 @@ public class Board {
         return Piece.SHORT_STRING[startPiece] + "[" + startSquare + "] " + Piece.SHORT_STRING[targetPiece] + "[" + targetSquare + "] " + Piece.SHORT_STRING[promotePiece] + "[" + promotePiece + "]";
     }
 
+    public static final int parseMove(long[] board, String moveString) {
+        int startSquare = Value.FILE_STRING.indexOf(moveString.charAt(0)) + ((Character.getNumericValue(moveString.charAt(1)) - 1) << 3);
+        int targetSquare = Value.FILE_STRING.indexOf(moveString.charAt(2)) + ((Character.getNumericValue(moveString.charAt(3)) - 1) << 3);
+        int promotePiece = 0;
+        if(moveString.length() > 4) {
+            promotePiece = PIECE_STRING.indexOf(moveString.charAt(4));
+        }
+        return startSquare | (targetSquare << 6) | (promotePiece << 12) | (getSquare(board, startSquare) << 16) | (getSquare(board, targetSquare) << 20); 
+    }
 }
