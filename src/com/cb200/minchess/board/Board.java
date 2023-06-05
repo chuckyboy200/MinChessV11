@@ -176,7 +176,8 @@ public class Board {
         int castling = Fen.getCastling(fen);
         board[STATUS] ^= castling << 1;
         /*
-         * get the en passant square from the FEN string and store the en passant square in STATUS. if there is no en passant square, set the en passant square to Value.NONE
+         * get the en passant square from the FEN string and store the en passant square in STATUS. if there is no valid en passant square, set the en passant square to Value.INVALID
+         * an invalid en passant square will be stored as a value of 0 in the appropriate STATUS bits
          */
         int eSquare = Fen.getEnPassantSquare(fen);
         boolean eSquareIsValid = ((eSquare > 15 && eSquare < 24) || (eSquare > 39 && eSquare < 40));
