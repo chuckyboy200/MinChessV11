@@ -16,10 +16,14 @@ public class GameWindow extends JFrame {
     private ControlPanel controlPanel;
 
     public GameWindow() {
+        this("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    public GameWindow(String fen) {
         super("MinChess");
         setLayout(new BorderLayout());
         setSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
-        long[] board = Board.startingPosition();
+        long[] board = Board.fromFen(fen);
         chessBoard = new ChessBoard(board);
         this.getContentPane().add(chessBoard, BorderLayout.WEST);
         controlPanel = new ControlPanel();
@@ -31,6 +35,10 @@ public class GameWindow extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
         setVisible(true);
+    }
+
+    public long[] getBoard() {
+        return this.chessBoard.getBoard();
     }
 
     public void println(String text, boolean upper) {

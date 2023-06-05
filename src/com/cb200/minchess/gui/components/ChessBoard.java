@@ -63,6 +63,10 @@ public class ChessBoard extends JPanel {
         lastTarget = -1;
     }
 
+    public long[] getBoard() {
+        return this.board;
+    }
+
     private void initializeBoard() {
         for(int rank = 7; rank >= 0; rank --) {
             for(int file = 0; file < 8; file ++) {
@@ -91,7 +95,7 @@ public class ChessBoard extends JPanel {
         int s = rank << 3 | file;
         this.square[s] = new JButton();
         this.square[s].setBounds(file * SQUARE_SIZE, (7 - rank) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
-        this.square[s].setBackground(COLOR[colorIndex][Integer.bitCount(s & 0x9) & 1]);
+        this.square[s].setBackground(COLOR[colorIndex][1 - (Integer.bitCount(s & 0x9) & 1)]);
         this.piece[s] = new JLabel();
         if(pieceInt != Value.NONE) {
             this.piece[s] = new JLabel(ChessPiece.pieceIcon[pieceInt], JLabel.CENTER);

@@ -30,9 +30,9 @@ public class Board {
      * This is the index in the board array for the board's various status bits as follows:
      * 1) The player to move (bit 0) 0 = white, 1 = black
      * 2) Castling rights (bits 1-4) bit 1 = white king side, bit 2 = white queen side, bit 3 = black king side, bit 4 = black queen side
-     * 3) En passant square (bits 5-10) no en passant square = 0, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
-     * 4) Half move count (bits 11-16) the number of half moves since the last capture or pawn move, used for the fifty move rule
-     * 5) Full move count (bits 17-24) the number of full moves, incremented after black's move
+     * 3) En passant square (bits 5-10) no en passant square = Value.INVALID, any other valid enpassant square value directly corresponds to the square on the board, e.g. a3 = 16
+     * 5) Half move count (bits 11-16) the number of half moves since the last capture or pawn move, used for the fifty move rule
+     * 6) Full move count (bits 17-24) the number of full moves, incremented after black's move
      */
     public static final int STATUS = 7;
     /*
@@ -64,6 +64,71 @@ public class Board {
      */
     public static final int player(long[] board) {
         return (int) board[STATUS] & PLAYER_BIT;
+    }
+
+    /**
+     * This method returns whether kingside castling is possible for a player
+     * @param board the board array
+     * @param player the player to move
+     * @return true if kingside castling is possible
+     */
+    public static final boolean kingSide(long[] board, int player) {
+        return ((board[STATUS] >>> 1) & Value.KINGSIDE_BIT[player]) != 0L;
+    }
+
+    /**
+     * This method returns whether queenside castling is possible for a player
+     * @param board the board array
+     * @param player the player to move
+     * @return true if queenside castling is possible
+     */
+    public static final boolean queenSide(long[] board, int player) {
+        return ((board[STATUS] >>> 1) & Value.QUEENSIDE_BIT[player]) != 0L;
+    }
+
+    /**
+     * This method returns whether the current En passant square is a valid value
+     * @param board the board array
+     * @return true if the current En passant square is a valid value
+     */
+    public static final boolean isValidEnPassantSquare(long[] board) {
+        return ((1L << ((int) (board[STATUS] >>> 5) & 0x3f)) & (B.BB[B.ENPASSANT_SQUARES_PLAYER0][0] | B.BB[B.ENPASSANT_SQUARES_PLAYER1][0])) != 0L;
+    }
+
+    /**
+     * This method returns a valid En passant square or Value.INVALID if not
+     * @param board the board array
+     * @return a valid En passant square or Value.INVALID if not
+     */
+    public static final int enPassantSquare(long[] board) {
+        return isValidEnPassantSquare(board) ? (int) (board[STATUS] >>> 5) & 0x3f : Value.INVALID;
+    }
+
+    /**
+     * This method returns the half move clock
+     * @param board the board array
+     * @return the half move clock
+     */
+    public static final int halfMoveCount(long[] board) {
+        return (int) (board[STATUS] >>> 11) & 0x3f;
+    }
+
+    /**
+     * This method returns the full move counter
+     * @param board the board array
+     * @return the full move counter
+     */
+    public static final int fullMoveCount(long[] board) {
+        return (int) (board[STATUS] >>> 17) & 0xff;
+    }
+
+    /**
+     * This method returns the boards Zobrist key
+     * @param board the board array
+     * @return the Zobrist key
+     */
+    public static final long key(long[] board) {
+        return board[KEY];
     }
 
     /**
@@ -114,10 +179,9 @@ public class Board {
          * get the en passant square from the FEN string and store the en passant square in STATUS. if there is no en passant square, set the en passant square to Value.NONE
          */
         int eSquare = Fen.getEnPassantSquare(fen);
-        if(!((eSquare > 15 && eSquare < 24) || (eSquare > 39 && eSquare < 40))) {
-            eSquare = Value.NONE;
-        }
-        board[STATUS] ^= eSquare << 5;
+        boolean eSquareIsValid = ((eSquare > 15 && eSquare < 24) || (eSquare > 39 && eSquare < 40));
+        board[STATUS] ^= eSquareIsValid ? eSquare << 5 : 0L;
+        eSquare = eSquareIsValid ? eSquare : Value.INVALID;
         /*
          * get the half move count and full move count from the FEN string and set their bits in STATUS
          */
@@ -198,7 +262,7 @@ public class Board {
          */
         long[] newBoard = Arrays.copyOf(board, board.length);
         int castling = (int) (newBoard[STATUS] >>> 1) & 0xf;
-        int eSquare = (int) newBoard[STATUS] >>> 5 & 0x3f;
+        int eSquare = enPassantSquare(board);
         int halfMoveCount = (int) newBoard[STATUS] >>> 11 & 0x3f;
         int fullMoveCount = (int) newBoard[STATUS] >>> 17 & 0x3f;
         long key = newBoard[KEY];
@@ -217,9 +281,9 @@ public class Board {
         /*
          * reset the en passant square if it is set
          */
-        if(eSquare != Value.NONE) {
+        if(eSquare != Value.INVALID) {
             key ^= Zobrist.ENPASSANT_FILE[eSquare & Value.FILE];
-            eSquare = Value.NONE;
+            eSquare = Value.INVALID;
         }
         /*
          * perform the move based on the piece type
@@ -394,7 +458,7 @@ public class Board {
                 /*
                  * perform an en passant capture. the difference between this capture and a normal capture is that the captured pawn is on a different square to the target square
                  */
-                if(targetSquare == ((board[STATUS] >>> 5) & 0x3f) && targetSquare != Value.NONE) {
+                if(targetSquare == enPassantSquare(board)) {
                     int other = 1 ^ player;
                     int otherBit = other << 3;
                     int captureSquare = targetSquare + (player == Value.WHITE ? -8 : 8);
@@ -435,7 +499,7 @@ public class Board {
         /*
          * create the new boards STATUS bits and set its KEY, then return the new board array
          */
-        newBoard[STATUS] = (1 ^ player) | (castling << 1) | (eSquare << 5) | (halfMoveCount << 11) | ((fullMoveCount + player) << 17);
+        newBoard[STATUS] = (1 ^ player) | (castling << 1) | (eSquare != Value.INVALID ? (eSquare << 5) : 0) | (halfMoveCount << 11) | ((fullMoveCount + player) << 17);
         newBoard[KEY] = key;
         return newBoard;
     }
@@ -712,13 +776,13 @@ public class Board {
                 }
             }
             /*
-             * get the en passant square from STATUS
+             * get the en passant square
              */
-            int eSquare = (int) board[STATUS] >>> 5 & 0x3f;
+            int eSquare = enPassantSquare(board);
             /*
              * add the en passant square to the other occupancy bitboard if it is set, as this is a square that the pawn can attack
              */
-            otherOccupancy |= (eSquare != Value.NONE ? (1L << eSquare) : 0L);
+            otherOccupancy |= (eSquare != Value.INVALID ? (1L << eSquare) : 0L);
             attacks |= B.BB[B.PAWN_ATTACKS_PLAYER0 + player][square] & otherOccupancy;
             /*
              * loop over each set bit in the attacks bitboard, where each set bit represents a square that the pawn attacks
@@ -800,9 +864,13 @@ public class Board {
         return boardString;
     }
 
+    public static final String squareToString(int square) {
+        return Value.FILE_STRING.charAt(square & Value.FILE) + Integer.toString((square >>> 3) + 1);
+    }
+
     public static final String moveString(int move) {
         int promotePiece = (move >>> 12) & 0xf;
-        return Value.FILE_STRING.charAt(move & Value.FILE) + Integer.toString(((move & 0x3f) >>> 3) + 1) + Value.FILE_STRING.charAt((move >>> 6) & Value.FILE) + Integer.toString(((move >>> 6 & 0x3f) >>> 3) + 1) + (promotePiece == Value.NONE ? "" : Piece.SHORT_STRING[promotePiece].toUpperCase());
+        return squareToString(move & 0x3f) + squareToString((move >>> 6) & 0x3f) + (promotePiece == Value.NONE ? "" : Piece.SHORT_STRING[promotePiece].toUpperCase());
     }
 
     public static final String moveNotationString(long[] board, int move) {
@@ -818,7 +886,6 @@ public class Board {
 		int player = startPiece >>> 3;
         int targetPiece = (move >>> 20) & 0xf;
         int promotePiece = (move >>> 12) & 0xf;
-        boolean isEnPassant = (targetSquare != 0 && ((board[Board.STATUS] >>> 5) & 0x3f) == targetSquare);
         long allOccupancy = board[Value.WHITE_BIT] | board[Value.BLACK_BIT];
         String notation = "";
 		switch(startType) {
@@ -900,13 +967,13 @@ public class Board {
                 break;
 			}
 		}
-		if(targetPiece != Value.NONE || isEnPassant) {
+		if(targetPiece != Value.NONE || targetSquare == enPassantSquare(board)) {
 			if(startType == Piece.PAWN) {
 				notation += Value.FILE_STRING.charAt(startFile);
 			}
 			notation += "x";
 		}
-		notation += Value.FILE_STRING.charAt(targetFile) + Integer.toString(targetRank + 1);
+		notation += squareToString(targetSquare);
 		if(promotePiece != Value.NONE) {
 			notation += "=";
 			switch(promotePiece & Piece.TYPE) {
@@ -946,4 +1013,46 @@ public class Board {
         }
         return startSquare | (targetSquare << 6) | (promotePiece << 12) | (getSquare(board, startSquare) << 16) | (getSquare(board, targetSquare) << 20); 
     }
+
+    public static final String toFenString(long[] board) {
+        //System.out.println("toFenString");
+        StringBuilder fen = new StringBuilder();
+        for(int rank = 7; rank >= 0; rank --) {
+            int empty = 0;
+            for(int file = 0; file < 8; file ++) {
+                int square = rank << 3 | file;
+                int piece = Board.getSquare(board, square);
+                if(piece != Value.NONE) {
+                    if(empty > 0) {
+                        fen.append(empty);
+                        empty = 0;
+                    }
+                    fen.append(Piece.SHORT_STRING[piece]);
+                } else {
+                    empty ++;
+                }
+            }
+            if(empty > 0) {
+                fen.append(empty);
+            }
+            if(rank > 0) {
+                fen.append('/');
+            }
+        }
+        fen.append(" " + (Board.player(board) == Value.WHITE ? "w " : "b "));
+        int castling = (int) (board[STATUS] >>> 1) & 0xf;
+        if(castling == 0) {
+            fen.append("- ");
+        } else {
+            fen.append((Board.kingSide(board, Value.WHITE) ? "K" : "") + (Board.queenSide(board, Value.WHITE) ? "Q" : "") + (Board.kingSide(board, Value.BLACK) ? "k" : "") + (Board.queenSide(board, Value.BLACK) ? "q" : "") + " ");
+        }
+        if(isValidEnPassantSquare(board)) {
+            fen.append(squareToString(enPassantSquare(board)) + " ");
+        } else {
+            fen.append("- ");
+        }
+        fen.append(Integer.toString(halfMoveCount(board)) + " " + Integer.toString(fullMoveCount(board)));
+        return fen.toString();
+    }
+
 }
