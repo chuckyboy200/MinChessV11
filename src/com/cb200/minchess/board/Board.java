@@ -62,7 +62,7 @@ public class Board {
      * @param board the board array
      * @return the player to move
      */
-    public static final int player(long[] board) {
+    public static int player(long[] board) {
         return (int) board[STATUS] & PLAYER_BIT;
     }
 
@@ -72,7 +72,7 @@ public class Board {
      * @param player the player to move
      * @return true if kingside castling is possible
      */
-    public static final boolean kingSide(long[] board, int player) {
+    public static boolean kingSide(long[] board, int player) {
         return ((board[STATUS] >>> 1) & Value.KINGSIDE_BIT[player]) != 0L;
     }
 
@@ -82,7 +82,7 @@ public class Board {
      * @param player the player to move
      * @return true if queenside castling is possible
      */
-    public static final boolean queenSide(long[] board, int player) {
+    public static boolean queenSide(long[] board, int player) {
         return ((board[STATUS] >>> 1) & Value.QUEENSIDE_BIT[player]) != 0L;
     }
 
@@ -91,7 +91,7 @@ public class Board {
      * @param board the board array
      * @return true if the current En passant square is a valid value
      */
-    public static final boolean isValidEnPassantSquare(long[] board) {
+    public static boolean isValidEnPassantSquare(long[] board) {
         return ((1L << ((int) (board[STATUS] >>> 5) & 0x3f)) & (B.BB[B.ENPASSANT_SQUARES_PLAYER0][0] | B.BB[B.ENPASSANT_SQUARES_PLAYER1][0])) != 0L;
     }
 
@@ -100,7 +100,7 @@ public class Board {
      * @param board the board array
      * @return a valid En passant square or Value.INVALID if not
      */
-    public static final int enPassantSquare(long[] board) {
+    public static int enPassantSquare(long[] board) {
         return isValidEnPassantSquare(board) ? (int) (board[STATUS] >>> 5) & 0x3f : Value.INVALID;
     }
 
@@ -109,7 +109,7 @@ public class Board {
      * @param board the board array
      * @return the half move clock
      */
-    public static final int halfMoveCount(long[] board) {
+    public static int halfMoveCount(long[] board) {
         return (int) (board[STATUS] >>> 11) & 0x3f;
     }
 
@@ -118,7 +118,7 @@ public class Board {
      * @param board the board array
      * @return the full move counter
      */
-    public static final int fullMoveCount(long[] board) {
+    public static int fullMoveCount(long[] board) {
         return (int) (board[STATUS] >>> 17) & 0xff;
     }
 
@@ -127,7 +127,7 @@ public class Board {
      * @param board the board array
      * @return the Zobrist key
      */
-    public static final long key(long[] board) {
+    public static long key(long[] board) {
         return board[KEY];
     }
 
@@ -135,7 +135,7 @@ public class Board {
      * This is a factory method which creates a new board array from a FEN string representing the starting position
      * @return a new board array representing the starting position
      */
-    public static final long[] startingPosition() {
+    public static long[] startingPosition() {
         return fromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
@@ -144,7 +144,7 @@ public class Board {
      * @param fen the FEN string 
      * @return a new board array representing the position in the FEN string
      */
-    public static final long[] fromFen(String fen) {
+    public static long[] fromFen(String fen) {
         /*
          * create a new empty board array
          */
@@ -202,7 +202,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return an array of moves, the array's max size is set at 100, the last element of the array is the length of the move list
      */
-    public static final int[] gen(long[] board, boolean legal, boolean tactical) {
+    public static int[] gen(long[] board, boolean legal, boolean tactical) {
         /*
          * get the player to move from STATUS, the playerBit (for index into the appropriate bitboard, and the otherBit (for index into the other player's bitboard)
          */
@@ -238,7 +238,7 @@ public class Board {
         return legal ? purgeIllegalMoves(board, moves) : moves;
     }
 
-    private static final int[] purgeIllegalMoves(long[] board, int[] moves) {
+    private static int[] purgeIllegalMoves(long[] board, int[] moves) {
         int[] legalMoves = new int[100];
         int legalMoveCount = 0;
         for(int move = 0; move < moves[99]; move ++) {
@@ -257,7 +257,7 @@ public class Board {
      * @param move the move to make
      * @return a new board array representing the position after making the move
      */
-    public static final long[] makeMove(long[] board, int move) {
+    public static long[] makeMove(long[] board, int move) {
         /*
          * create a new board array and create copies of the board's bitboards, castling rights, en passant square, half move count, full move count, and Zobrist key as these may be modified by the move
          */
@@ -511,7 +511,7 @@ public class Board {
      * @param move the move to make 
      * @return the new board array
      */
-    public static final long[] nullMove(long[] board, int move) {
+    public static long[] nullMove(long[] board, int move) {
         /*
          * a null move is where a player makes a second move in a row without the opponent making a move
         * to set this up, we are passed a board where normally a player would make the next move but we flip the player bit and reset the en passant square since an en passant move is not possible in a null move
@@ -526,7 +526,7 @@ public class Board {
      * @param square the square to get the contents of
      * @return the contents of the square, an empty square returns Value.NONE
      */
-    public static final int getSquare(long[] board, int square) {
+    public static int getSquare(long[] board, int square) {
         /*
          * get the bitboard representation of the square
          */
@@ -561,7 +561,7 @@ public class Board {
      * @param player the player to check is attacking the square
      * @return true if the square is attacked by the player, false otherwise
      */
-    public static final boolean isSquareAttackedByPlayer(long[] board, int square, int player) {
+    public static boolean isSquareAttackedByPlayer(long[] board, int square, int player) {
         int playerBit = player << 3;
         /*
          * check whether a player's knight is attacking this square, if so return true
@@ -599,7 +599,7 @@ public class Board {
      * @param player the player to check
      * @return true if the player is in check, false otherwise
      */
-    public static final boolean isPlayerInCheck(long[] board, int player) {
+    public static boolean isPlayerInCheck(long[] board, int player) {
         return isSquareAttackedByPlayer(board, Long.numberOfTrailingZeros(board[Piece.KING | (player << 3)]), 1 ^ player);
     }
 
@@ -612,7 +612,7 @@ public class Board {
      * @param moveListLength the current number of moves in the moves array
      * @param piece the piece being moved
      */
-    private static final void addMove(long[] board, int[] moves, int startSquare, int targetSquare, int moveListLength, int piece) {
+    private static void addMove(long[] board, int[] moves, int startSquare, int targetSquare, int moveListLength, int piece) {
         moves[moveListLength] = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
     }
 
@@ -626,7 +626,7 @@ public class Board {
      * @param moveListLength the current number of moves in the moves array
      * @param piece the piece being moved
      */
-    private static final void addPromotionMoves(long[] board, int[] moves, int startSquare, int targetSquare, int playerBit, int moveListLength, int piece) {
+    private static void addPromotionMoves(long[] board, int[] moves, int startSquare, int targetSquare, int playerBit, int moveListLength, int piece) {
         int moveInfo = startSquare | (targetSquare << 6) | (piece << 16) | (getSquare(board, targetSquare) << 20);
         moves[moveListLength ++] = moveInfo | ((Piece.ROOK | playerBit) << 12);
         moves[moveListLength ++] = moveInfo | ((Piece.BISHOP | playerBit) << 12);
@@ -645,7 +645,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return the number of moves in the moves array after king moves have been generated
      */
-    private static final int getKingMoves(long[] board, int[] moves, int piece, int player, long allOccupancy, long tacticalOccupancy, boolean tactical) {
+    private static int getKingMoves(long[] board, int[] moves, int piece, int player, long allOccupancy, long tacticalOccupancy, boolean tactical) {
         /*
          * since king generation is first, there are no moves in the moves array and so moveListLength is 0
          */
@@ -707,7 +707,7 @@ public class Board {
      * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
      * @return the number of moves in the moves array after knight moves have been generated
      */
-    private static final int getKnightMoves(long[] board, int[] moves, int piece, int moveListLength, long tacticalOccupancy) {
+    private static int getKnightMoves(long[] board, int[] moves, int piece, int moveListLength, long tacticalOccupancy) {
         /*
          * get the knight bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a knight on it
          */
@@ -743,7 +743,7 @@ public class Board {
      * @param tactical whether to generate only tactical moves
      * @return 
      */
-    private static final int getPawnMoves(long[] board, int[] moves, int piece, int moveListLength, int player, long allOccupancy, long otherOccupancy, boolean tactical) {
+    private static int getPawnMoves(long[] board, int[] moves, int piece, int moveListLength, int player, long allOccupancy, long otherOccupancy, boolean tactical) {
         /*
          * get the pawn bitboard and loop over each set bit in the bitboard, where each set bit represents a square with a pawn on it
          */
@@ -818,7 +818,7 @@ public class Board {
      * @param tacticalOccupancy the occupancy of all squares on the board for tactical moves
      * @return the number of moves in the moves array after slider moves have been generated
      */
-    private static final int getSliderMoves(long[] board, int[] moves, int player, int moveListLength, long allOccupancy, long tacticalOccupancy) {
+    private static int getSliderMoves(long[] board, int[] moves, int player, int moveListLength, long allOccupancy, long tacticalOccupancy) {
         /*
          * get the player bit for calculations later
          */
@@ -844,37 +844,80 @@ public class Board {
         return moveListLength;
     }
 
-    public static final void drawText(long[] board) {
+    /**
+     * Output a text representation of the board to the console
+     * @param board the board array
+     */
+    public static void drawText(long[] board) {
         System.out.println(boardString(board));
     }
 
-    public static final String boardString(long[] board) {
+    /**
+     * Create a string representation of the board
+     * @param board the board array
+     * @return a string representation of the board
+     */
+    public static String boardString(long[] board) {
         String boardString = "";
+        /*
+         * loop over the ranks and files of the board
+         */
         for(int rank = 7; rank >= 0; rank --) {
 			for(int file = 0; file < 8; file ++) {
+                /*
+                 * calculate the square and get the contents of that square 
+                 */
 				int square = rank << 3 | file;
 				int piece = getSquare(board, square);
+                /*
+                 * if the square is not empty, add the short string representation of the piece to the board string, otherwise add a dot
+                 */
 				if(piece != Value.NONE) {
                     boardString += Piece.SHORT_STRING[piece] + " ";
 				} else {
                     boardString += ". ";
 				}
 			}
+            /*
+             * end of the rank so add a new line to the board string
+             */
 			boardString += "\n";
 		}
         return boardString;
     }
 
-    public static final String squareToString(int square) {
+    /**
+     * convert a square index to a string representation
+     * @param square the square index
+     * @return a string representation of the square
+     */
+    public static String squareToString(int square) {
         return Value.FILE_STRING.charAt(square & Value.FILE) + Integer.toString((square >>> 3) + 1);
     }
 
-    public static final String moveString(int move) {
+    /**
+     * convert a move to a string representation in algebraic notation
+     * @param move the move
+     * @return a string representation of the move in algebraic notation
+     */
+    public static String moveString(int move) {
+        /**
+         * get the promotion piece from the move
+         */
         int promotePiece = (move >>> 12) & 0xf;
         return squareToString(move & 0x3f) + squareToString((move >>> 6) & 0x3f) + (promotePiece == Value.NONE ? "" : Piece.SHORT_STRING[promotePiece].toUpperCase());
     }
 
-    public static final String moveNotationString(long[] board, int move) {
+    /**
+     * convert a move to a string representation in standard notation
+     * @param board the board array
+     * @param move the move
+     * @return a string representation of the move in standard notation
+     */
+    public static String moveNotationString(long[] board, int move) {
+        /*
+         * get the start square and target square information from the move
+         */
         int startSquare = move & 0x3f;
         int startFile = startSquare & Value.FILE;
         int startRank = startSquare >>> 3;
@@ -887,10 +930,22 @@ public class Board {
 		int player = startPiece >>> 3;
         int targetPiece = (move >>> 20) & 0xf;
         int promotePiece = (move >>> 12) & 0xf;
+        /**
+         * get the occupancy of all squares on the board for use in magic bitboard calculations
+         */
         long allOccupancy = board[Value.WHITE_BIT] | board[Value.BLACK_BIT];
+        /**
+         * set the notation string to an empty string
+         */
         String notation = "";
+        /*
+         * handle the moving piece type
+         */
 		switch(startType) {
 			case Piece.KING: {
+                /*
+                 * if this is a castling move, return the castling notation
+                 */
 				if(Math.abs(startSquare - targetSquare) == 2) {
 					return "O-O" + (targetFile == Value.FILE_G ? "" : "-O");
 				}
@@ -899,17 +954,35 @@ public class Board {
 			}
             case Piece.QUEEN: {
                 notation = "Q";
+                /*
+                 * if there is more than one queen that can move to the target square, add the file or rank of the start square to the notation
+                 * use magic bitboard calculations to determine if there is more than one queen that can move to the target square
+                 */
                 long queensAttackTargetSquare = Magic.queenMoves(targetSquare, allOccupancy) & pieceBitboard;
+                /*
+                 * if there is more than one queen that can move to the target square, add the file or rank (or both) of the start square to the notation
+                 */
                 if(queensAttackTargetSquare > 1L) {
                     int queensOnFile = Long.bitCount(queensAttackTargetSquare & B.BB[B.FILE][targetFile]);
                     int queensOnRank = Long.bitCount(queensAttackTargetSquare & B.BB[B.RANK][targetRank]);
                     int queensOnDiagonals = Long.bitCount(queensAttackTargetSquare & (B.BB[B.DIAGONAL_ATTACKS][targetSquare]));
+                    /*
+                     * if the additional queens are on the same rank as the start square, add the file of the start square to the notation
+                     */
                     if(queensOnRank > 1) {
                         notation += Value.FILE_STRING.charAt(startFile);
                     }
+                    /*
+                     * if the additional queens are on the same file as the start square, add the rank of the start square to the notation
+                     */
                     if(queensOnFile > 1) {
                         notation += Integer.toString(startRank + 1);
                     }
+                    /*
+                     * if the additional queens are on the same diagonal as the start square, add the file of the start square to the notation
+                     * and a rank or file has not already been added to the notation string (i.e. the notation string is only "Q" at this point),
+                     * add the file of the start square to the notation
+                     */
                     if(notation.length() == 1 && queensOnDiagonals > 1) {
                         notation += Value.FILE_STRING.charAt(startFile);
                     }
@@ -918,6 +991,9 @@ public class Board {
             }
 			case Piece.ROOK: {
 				notation = "R";
+                /*
+                 * follow a similar method to the queen notation above, but only for files and ranks
+                 */
 				long rooksAttackTargetSquare = Magic.rookMoves(targetSquare, allOccupancy) & pieceBitboard;
                 if(rooksAttackTargetSquare > 1L) {
                     int rooksOnFile = Long.bitCount(rooksAttackTargetSquare & B.BB[B.FILE][targetFile]);
@@ -933,6 +1009,9 @@ public class Board {
 			}
 			case Piece.BISHOP: {
 				notation = "B";
+                /*
+                 * follow a similar method to the queen notation above, but only for diagonals
+                 */
 				long bishopsAttackTargetSquare = Magic.bishopMoves(targetSquare, allOccupancy) & pieceBitboard;
                 if(bishopsAttackTargetSquare > 1L) {
                     int bishopsOnFile = Long.bitCount(bishopsAttackTargetSquare & B.BB[B.FILE][targetFile]);
@@ -952,6 +1031,9 @@ public class Board {
 			}
 			case Piece.KNIGHT: {
 				notation = "N";
+                /*
+                 * if there is more than one knight that can move to the target square, add the file or rank of the start square to the notation
+                 */
 				if(Long.bitCount(B.BB[B.LEAP_ATTACKS][targetSquare] & pieceBitboard) > 1) {
                     if(Long.bitCount(B.BB[B.RANK][startRank] & pieceBitboard) > 1){
 						notation += Value.FILE_STRING.charAt(startFile);
@@ -962,19 +1044,32 @@ public class Board {
 				}
 				break;
 			}
+            /*
+             * if the piece is a pawn, we don't need to add any additional notation for the start square
+             */
 			case Piece.PAWN:
             default: {
 				notation = "";
                 break;
 			}
 		}
+        /*
+         * if there is a piece on the target square or the move is an en passant move (i.e. the start piece is a pawn and the target square is the en passant square)
+         * add an "x" to the notation
+         */
 		if(targetPiece != Value.NONE || targetSquare == enPassantSquare(board)) {
 			if(startType == Piece.PAWN) {
 				notation += Value.FILE_STRING.charAt(startFile);
 			}
 			notation += "x";
 		}
+        /*
+         * add the target square to the notation
+         */
 		notation += squareToString(targetSquare);
+        /*
+         * if there is a promotion piece, add the promotion piece to the notation
+         */
 		if(promotePiece != Value.NONE) {
 			notation += "=";
 			switch(promotePiece & Piece.TYPE) {
@@ -984,9 +1079,18 @@ public class Board {
 				case Piece.KNIGHT: notation += "N"; break;
 			}
 		}
+        /*
+         * check to see whether the move checks the opposing king
+         */
         long[] tempBoard = Board.makeMove(board, move);
 		if(Board.isPlayerInCheck(tempBoard, 1 ^ player)) {
+            /*
+             * if the opposing king is in check, see if there are any legal moves for the opposing player
+             */
 			int[] moves = Board.gen(tempBoard, true, false);
+            /*
+             * if there are no legal moves, this move is a mating move, otherwise it is a checking move
+             */
 			if(moves[99] == 0) {
 				notation += "#";
 			} else {
@@ -996,7 +1100,12 @@ public class Board {
 		return notation;
     }
 
-    public static final String moveStringVerbose(int move) {
+    /**
+     * Returns a string representation of a move in verbose notation for debugging purposes
+     * @param move the move to be converted to a string
+     * @return a string representation of the move in verbose notation
+     */
+    public static String moveStringVerbose(int move) {
         int startSquare = move & 0x3f;
         int targetSquare = (move >>> 6) & 0x3f;
         int promotePiece = (move >>> 12) & 0xf;
@@ -1005,18 +1114,40 @@ public class Board {
         return Piece.SHORT_STRING[startPiece] + "[" + startSquare + "] " + Piece.SHORT_STRING[targetPiece] + "[" + targetSquare + "] " + Piece.SHORT_STRING[promotePiece] + "[" + promotePiece + "]";
     }
 
+    /**
+     * Convert an algebraic move string to a move integer
+     * @param board the board array
+     * @param moveString the move string to be converted
+     * @return the move integer
+     */
     public static final int parseMove(long[] board, String moveString) {
+        /*
+         * get the start square and target square from the move string
+         */
         int startSquare = Value.FILE_STRING.indexOf(moveString.charAt(0)) + ((Character.getNumericValue(moveString.charAt(1)) - 1) << 3);
         int targetSquare = Value.FILE_STRING.indexOf(moveString.charAt(2)) + ((Character.getNumericValue(moveString.charAt(3)) - 1) << 3);
         int promotePiece = 0;
+        /*
+         * if the move string has a 5th character, it is a promotion move, so get the promotion piece from the move string
+         */
         if(moveString.length() > 4) {
             promotePiece = PIECE_STRING.indexOf(moveString.charAt(4));
         }
+        /*
+         * create a move integer from the start square, target square, promotion piece, start piece and target piece
+         */
         return startSquare | (targetSquare << 6) | (promotePiece << 12) | (getSquare(board, startSquare) << 16) | (getSquare(board, targetSquare) << 20); 
     }
 
-    public static final String toFenString(long[] board) {
-        //System.out.println("toFenString");
+    /**
+     * extract a FEN string representation from a board array
+     * @param board the board array
+     * @return the FEN string representation of the board array
+     */
+    public static String toFenString(long[] board) {
+        /**
+         * initialise a FEN string and loop over the board to get the piece placement
+         */
         StringBuilder fen = new StringBuilder();
         for(int rank = 7; rank >= 0; rank --) {
             int empty = 0;
@@ -1040,20 +1171,63 @@ public class Board {
                 fen.append('/');
             }
         }
+        /*
+         * determine the player to move
+         */
         fen.append(" " + (Board.player(board) == Value.WHITE ? "w " : "b "));
+        /*
+         * get the castling rights
+         */
         int castling = (int) (board[STATUS] >>> 1) & 0xf;
         if(castling == 0) {
             fen.append("- ");
         } else {
             fen.append((Board.kingSide(board, Value.WHITE) ? "K" : "") + (Board.queenSide(board, Value.WHITE) ? "Q" : "") + (Board.kingSide(board, Value.BLACK) ? "k" : "") + (Board.queenSide(board, Value.BLACK) ? "q" : "") + " ");
         }
+        /*
+         * get a valid en passant square
+         */
         if(isValidEnPassantSquare(board)) {
             fen.append(squareToString(enPassantSquare(board)) + " ");
         } else {
             fen.append("- ");
         }
+        /*
+         * add the half move and full move counts to the FEN string
+         */
         fen.append(Integer.toString(halfMoveCount(board)) + " " + Integer.toString(fullMoveCount(board)));
         return fen.toString();
+    }
+
+    /**
+     * check whether a move from one square to another exists in a list of moves
+     * @param moves the list of moves
+     * @param startSquare the start square of the move
+     * @param targetSquare the target square of the move
+     * @return the index of the move in the list of moves, or Value.INVALID if there is no matching move in the move list
+     */
+    public static int isValidMove(int[] moves, int startSquare, int targetSquare) {
+        int index = Value.INVALID;
+        /*
+         * loop over the moves in the list of moves and check if the start and target squares match the start and target squares of the move
+         */
+        for(int move = 0; move < moves[99]; move ++) {
+            if((moves[move] & 0xfff) == convertStartTarget(startSquare, targetSquare)) {
+                index = move;
+                break;
+            }
+        }
+        return index;
+    }
+
+    /**
+     * convert a start square and target square to a move integer
+     * @param startSquare the start square of the move
+     * @param targetSquare the target square of the move
+     * @return the move integer
+     */
+    public static int convertStartTarget(int startSquare, int targetSquare) {
+        return startSquare | (targetSquare << 6);
     }
 
 }

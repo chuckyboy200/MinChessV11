@@ -25,7 +25,7 @@ public class GameWindow extends JFrame {
         setSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
         long[] board = Board.fromFen(fen);
         chessBoard = new ChessBoard(board);
-        this.getContentPane().add(chessBoard, BorderLayout.WEST);
+        this.getContentPane().add(chessBoard.getView(), BorderLayout.WEST);
         controlPanel = new ControlPanel();
         this.getContentPane().add(controlPanel, BorderLayout.NORTH);
         this.getContentPane().add(controlPanel, BorderLayout.EAST);

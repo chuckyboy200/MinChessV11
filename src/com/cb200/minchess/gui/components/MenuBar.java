@@ -17,14 +17,33 @@ public class MenuBar extends JMenuBar {
         fileMenu.add(fileMenuPlaceholder);
         fileMenuPlaceholder.addActionListener(e -> System.exit(0));
 
-        JMenu editMenu = new JMenu("Edit");
-        JMenuItem editMenuPlaceholder = new JMenuItem("Placeholder");
-        editMenu.add(editMenuPlaceholder);
-        editMenuPlaceholder.addActionListener(e -> System.out.println("Edit -> Placeholder"));
+        JMenu editMenu = new JMenu("Players");
+        JMenuItem editMenuWhitePlayer = new JMenuItem("White Player");
+        JMenuItem editMenuBlackPlayer = new JMenuItem("Black Player");
+        JMenuItem editMenuSelfPlay = new JMenuItem("Self Play");
+        editMenu.add(editMenuWhitePlayer);
+        editMenu.add(editMenuBlackPlayer);
+        editMenu.add(editMenuSelfPlay);
+        editMenuWhitePlayer.addActionListener(e -> System.out.println("Edit -> White Player"));
+        editMenuBlackPlayer.addActionListener(e -> System.out.println("Edit -> Black Player"));
+        editMenuSelfPlay.addActionListener(e -> System.out.println("Edit -> Self Play"));
+
+        JMenu gameplayMenu = new JMenu("Gameplay");
+        JMenuItem gameplayMenuNewGame = new JMenuItem("New Game");
+        JMenuItem gameplayMenuUndoMove = new JMenuItem("Undo Move");
+        JMenuItem gameplayMenuRedoMove = new JMenuItem("Redo Move");
+        gameplayMenu.add(gameplayMenuNewGame);
+        gameplayMenu.add(gameplayMenuUndoMove);
+        gameplayMenu.add(gameplayMenuRedoMove);
 
         JMenu toolsMenu = new JMenu("Tools");
+        JMenuItem toolsMenuAnalysis = new JMenuItem("Analysis");
         JMenuItem toolsMenuPerft = new JMenuItem("Perft");
+        JMenuItem toolsMenuLoadFen = new JMenuItem("Load FEN string");
+        toolsMenu.add(toolsMenuAnalysis);
         toolsMenu.add(toolsMenuPerft);
+        toolsMenu.add(toolsMenuLoadFen);
+        toolsMenuAnalysis.addActionListener(e -> System.out.println("Tools -> Analysis"));
         toolsMenuPerft.addActionListener(e -> {
             SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                 @Override
@@ -35,6 +54,7 @@ public class MenuBar extends JMenuBar {
             };
             worker.execute();
         });
+        toolsMenuLoadFen.addActionListener(e -> System.out.println("Tools -> Load FEN string"));
 
         JMenu actionsMenu = new JMenu("Actions");
         JMenuItem actionsMenuFEN = new JMenuItem("Output FEN String");

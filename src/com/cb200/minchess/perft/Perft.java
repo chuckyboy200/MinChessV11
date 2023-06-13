@@ -56,7 +56,7 @@ public class Perft {
     };
 
     public final static int[] POSITION_PERFT_DEPTH = {
-            6,5,7,6,3,6,6,6,6,6,4,4,6,5,6,6,6,7,4
+            7,5,7,6,3,6,6,6,6,6,4,4,6,5,6,6,6,7,4
     };
 
     private static long elapsedTime;

@@ -6,12 +6,13 @@ import java.net.URL;
 import javax.swing.ImageIcon;
 
 import com.cb200.chessutils.piece.Piece;
+import com.cb200.minchess.gui.views.ChessBoardView;
 
 public class ChessPiece {
     
     public static final ImageIcon[] pieceIcon;
 
-    private static final int PIECE_SIZE = (int) (ChessBoard.SQUARE_SIZE / 1.5);
+    private static final int PIECE_SIZE = (int) (ChessBoardView.SQUARE_SIZE / 1.5);
 
     static {
         pieceIcon = new ImageIcon[15];
